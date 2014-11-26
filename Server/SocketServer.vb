@@ -1,13 +1,13 @@
 ﻿
 Public Class SocketServer
 
-    Private cServerPort As Integer = 0
-    Private cServerAddress As Net.IPAddress = Net.IPAddress.Any
+    Private _ServerPort As Integer = 0
+    Private _ServerAddress As Net.IPAddress = Net.IPAddress.Any
 
-    Dim cServerSocket As Net.Sockets.Socket
-    Dim cStopRequested As Boolean = False
+    Dim _ServerSocket As Net.Sockets.Socket
+    Dim _StopRequested As Boolean = False
     'Dim cClients As New ArrayList
-    Dim cClientList As New List(Of Net.Sockets.Socket)
+    Dim _ClientList As New List(Of Net.Sockets.Socket)
 
     Event MessageReceived(ByVal argMessage As String, ByVal argClientSocket As Net.Sockets.Socket)
     Event ClientConnected(ByVal argClientSocket As Net.Sockets.Socket)
@@ -15,17 +15,17 @@ Public Class SocketServer
 
     Public ReadOnly Property ClientList() As List(Of Net.Sockets.Socket)
         Get
-            Return cClientList
+            Return _ClientList
         End Get
     End Property
 
     Public Property LocalPort() As Integer
         Get
-            Return cServerPort
+            Return _ServerPort
         End Get
         Set(ByVal value As Integer)
             If value > 0 And value <= 65535 Then
-                cServerPort = value
+                _ServerPort = value
             Else
                 Throw New ConstraintException("Port must be between 1 and 65535")
             End If
@@ -34,10 +34,10 @@ Public Class SocketServer
 
     Public Property LocalAddress() As Net.IPAddress
         Get
-            Return cServerAddress
+            Return _ServerAddress
         End Get
         Set(ByVal value As Net.IPAddress)
-            cServerAddress = value
+            _ServerAddress = value
         End Set
     End Property
 
@@ -78,32 +78,32 @@ Public Class SocketServer
     Sub StartServer()
 
         ' create the TcpListener which will listen for and accept new client connections asynchronously
-        cServerSocket = New System.Net.Sockets.Socket(Net.Sockets.AddressFamily.InterNetwork, Net.Sockets.SocketType.Stream, Net.Sockets.ProtocolType.Tcp)
+        _ServerSocket = New System.Net.Sockets.Socket(Net.Sockets.AddressFamily.InterNetwork, Net.Sockets.SocketType.Stream, Net.Sockets.ProtocolType.Tcp)
         'cServerSocket.DualMode = True
         ' convert the server address and port into an ipendpoint
         'Dim mHostAddresses() As Net.IPAddress = Net.Dns.GetHostAddresses(cServerAddress)
         Dim mEndPoint As Net.IPEndPoint = Nothing
         'For Each mHostAddress In mHostAddresses
         'If mHostAddress.AddressFamily = Net.Sockets.AddressFamily.InterNetwork Then
-        mEndPoint = New Net.IPEndPoint(cServerAddress, cServerPort)
+        mEndPoint = New Net.IPEndPoint(_ServerAddress, _ServerPort)
         'End If
         'Next
 
         ' bind to the server's ipendpoint
-        cServerSocket.Bind(mEndPoint)
+        _ServerSocket.Bind(mEndPoint)
 
         ' configure the listener to allow 1 incoming connection at a time
-        cServerSocket.Listen(1)
+        _ServerSocket.Listen(1)
 
         ' accept client connection async
-        cServerSocket.BeginAccept(New AsyncCallback(AddressOf ClientAccepted), cServerSocket)
+        _ServerSocket.BeginAccept(New AsyncCallback(AddressOf ClientAccepted), _ServerSocket)
 
     End Sub
 
     Sub StopServer()
         'cServerSocket.Disconnect(True)
-        If cServerSocket.Connected Then cServerSocket.Shutdown(Net.Sockets.SocketShutdown.Both)
-        cServerSocket.Close()
+        If _ServerSocket.Connected Then _ServerSocket.Shutdown(Net.Sockets.SocketShutdown.Both)
+        _ServerSocket.Close()
         'cStopRequested = True
     End Sub
 
@@ -126,7 +126,7 @@ Public Class SocketServer
         ' instruct the client to begin receiving data
         Dim mState As New AsyncReceiveState
         mState.Socket = mClientSocket
-        cClientList.Add(mState.Socket)
+        _ClientList.Add(mState.Socket)
         RaiseEvent ClientConnected(mState.Socket)
         mState.Socket.BeginReceive(mState.Buffer, 0, gBufferSize, Net.Sockets.SocketFlags.None, New AsyncCallback(AddressOf ClientMessageReceived), mState)
         ' begin accepting another client connection
@@ -148,7 +148,7 @@ Public Class SocketServer
         Catch ex As Net.Sockets.SocketException
             ' if we get a ConnectionReset exception, it could indicate that the client has disconnected
             If ex.SocketErrorCode = Net.Sockets.SocketError.ConnectionReset Then
-                cClientList.Remove(mState.Socket)
+                _ClientList.Remove(mState.Socket)
                 RaiseEvent ClientDisconnected(mState.Socket)
                 Exit Sub
             End If

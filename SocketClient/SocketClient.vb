@@ -1,9 +1,9 @@
 ﻿Public Class SocketClient
 
-    Dim cServerPort As Integer = 0
-    Dim cServerAddress As Net.IPAddress = Nothing
+    Dim _ServerPort As Integer = 0
+    Dim _ServerAddress As Net.IPAddress = Nothing
 
-    Dim cClientSocket As Net.Sockets.Socket
+    Dim _ClientSocket As Net.Sockets.Socket
     Dim WithEvents cSendQueue As New MessageQueue
 
     Event MessageSentToServer(ByVal argCommandString As String)
@@ -12,20 +12,20 @@
 
     Public Property ServerAddress() As Net.IPAddress
         Get
-            Return cServerAddress
+            Return _ServerAddress
         End Get
         Set(ByVal value As Net.IPAddress)
-            cServerAddress = value
+            _ServerAddress = value
         End Set
     End Property
 
     Public Property ServerPort() As Integer
         Get
-            Return cServerPort
+            Return _ServerPort
         End Get
         Set(ByVal value As Integer)
             If value > 0 And value <= 65535 Then
-                cServerPort = value
+                _ServerPort = value
             Else
                 Throw New ConstraintException("Port must be between 1 and 65535")
             End If
@@ -46,25 +46,25 @@
 
     Sub ConnectToServer()
         ' create the TcpListener which will listen for and accept new client connections asynchronously
-        cClientSocket = New System.Net.Sockets.Socket(Net.Sockets.AddressFamily.InterNetwork, Net.Sockets.SocketType.Stream, Net.Sockets.ProtocolType.Tcp)
+        _ClientSocket = New System.Net.Sockets.Socket(Net.Sockets.AddressFamily.InterNetwork, Net.Sockets.SocketType.Stream, Net.Sockets.ProtocolType.Tcp)
         ' convert the server address and port into an ipendpoint
         'Dim mHostAddresses() As Net.IPAddress = Net.Dns.GetHostAddresses(cServerAddress)
         Dim mEndPoint As Net.IPEndPoint = Nothing
         'For Each mHostAddress In mHostAddresses
         'If mHostAddress.AddressFamily = Net.Sockets.AddressFamily.InterNetwork Then
-        mEndPoint = New Net.IPEndPoint(cServerAddress, cServerPort)
+        mEndPoint = New Net.IPEndPoint(_ServerAddress, _ServerPort)
         'End If
         'Next
         ' connect to server async
         Try
-            cClientSocket.BeginConnect(mEndPoint, New AsyncCallback(AddressOf ConnectToServerCompleted), New AsyncSendState(cClientSocket))
+            _ClientSocket.BeginConnect(mEndPoint, New AsyncCallback(AddressOf ConnectToServerCompleted), New AsyncSendState(_ClientSocket))
         Catch ex As Exception
             Throw ex
         End Try
     End Sub
 
     Sub DisconnectFromServer()
-        cClientSocket.Disconnect(False)
+        _ClientSocket.Disconnect(False)
     End Sub
 
     ''' <summary>
@@ -161,7 +161,7 @@
         Dim mSizeBytes() As Byte = BitConverter.GetBytes(mPacketBytes.Length + 4)
 
         ' create the async state object which we can pass between async methods
-        Dim mState As New AsyncSendState(cClientSocket)
+        Dim mState As New AsyncSendState(_ClientSocket)
 
         ' resize the BytesToSend array to fit both the mSizeBytes and the mPacketBytes
         ReDim mState.BytesToSend(mPacketBytes.Length + mSizeBytes.Length - 1)
@@ -170,7 +170,7 @@
         System.Buffer.BlockCopy(mSizeBytes, 0, mState.BytesToSend, 0, mSizeBytes.Length)
         System.Buffer.BlockCopy(mPacketBytes, 0, mState.BytesToSend, mSizeBytes.Length, mPacketBytes.Length)
 
-        cClientSocket.BeginSend(mState.BytesToSend, mState.NextOffset, mState.NextLength, Net.Sockets.SocketFlags.None, New AsyncCallback(AddressOf MessagePartSent), mState)
+        _ClientSocket.BeginSend(mState.BytesToSend, mState.NextOffset, mState.NextLength, Net.Sockets.SocketFlags.None, New AsyncCallback(AddressOf MessagePartSent), mState)
 
     End Sub
 
@@ -190,7 +190,7 @@
             ' process the top message in the queue, which in turn will process all other messages until the queue is empty
             Dim mState As AsyncSendState = cSendQueue.Messages.Dequeue
             ' we must send the correct number of bytes, which must not be greater than the remaining bytes
-            cClientSocket.BeginSend(mState.BytesToSend, mState.NextOffset, mState.NextLength, Net.Sockets.SocketFlags.None, New AsyncCallback(AddressOf MessagePartSent), mState)
+            _ClientSocket.BeginSend(mState.BytesToSend, mState.NextOffset, mState.NextLength, Net.Sockets.SocketFlags.None, New AsyncCallback(AddressOf MessagePartSent), mState)
         End If
     End Sub
 
